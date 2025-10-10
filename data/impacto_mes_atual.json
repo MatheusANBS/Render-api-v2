@@ -7,20 +7,20 @@
     "mes_nome_pt": "Outubro",
     "ano": 2025,
     "mes": 10,
-    "atualizado_em": "2025-10-09 13:28:21",
-    "total_embarcacoes": 3
+    "atualizado_em": "2025-10-10 09:29:53",
+    "total_embarcacoes": 2
   },
   "resumo_geral": {
-    "horas_paralisacao": 62.6,
+    "horas_paralisacao": 52.1,
     "horas_parcial": 0,
-    "horas_impacto_total": 62.6,
-    "dias_acoplado": 14,
-    "dias_desacoplado": 2,
-    "dias_parcial": 8,
-    "dias_efetivos_total": 24,
-    "percentual_acoplado": 58.3,
-    "percentual_desacoplado": 8.3,
-    "percentual_parcial": 33.3
+    "horas_impacto_total": 52.1,
+    "dias_acoplado": 11,
+    "dias_desacoplado": 0,
+    "dias_parcial": 6,
+    "dias_efetivos_total": 17,
+    "percentual_acoplado": 64.7,
+    "percentual_desacoplado": 0.0,
+    "percentual_parcial": 35.3
   },
   "embarcacoes": {
     "P-53": {
@@ -38,54 +38,39 @@
       "percentual_desacoplado": 0.0,
       "percentual_parcial": 42.9
     },
-    "P-54": {
-      "horas_paralisacao": 10.5,
-      "horas_parcial": 0,
-      "horas_impacto_total": 10.5,
-      "dias_acoplado": 4,
-      "dias_desacoplado": 2,
-      "dias_parcial": 2,
-      "dias_com_paralisacao": 2,
-      "dias_sem_paralisacao": 19,
-      "total_registros": 21,
-      "dias_efetivos_total": 8,
-      "percentual_acoplado": 50.0,
-      "percentual_desacoplado": 25.0,
-      "percentual_parcial": 25.0
-    },
     "P-62": {
       "horas_paralisacao": 45.6,
       "horas_parcial": 0,
       "horas_impacto_total": 45.6,
-      "dias_acoplado": 6,
+      "dias_acoplado": 7,
       "dias_desacoplado": 0,
       "dias_parcial": 3,
       "dias_com_paralisacao": 3,
       "dias_sem_paralisacao": 18,
       "total_registros": 21,
-      "dias_efetivos_total": 9,
-      "percentual_acoplado": 66.7,
+      "dias_efetivos_total": 10,
+      "percentual_acoplado": 70.0,
       "percentual_desacoplado": 0.0,
-      "percentual_parcial": 33.3
+      "percentual_parcial": 30.0
     }
   },
   "grafico_pizza": [
     {
       "status": "Acoplado",
-      "dias": 14,
-      "percentual": 58.3,
+      "dias": 11,
+      "percentual": 64.7,
       "cor": "#2E8B57"
     },
     {
       "status": "Desacoplado",
-      "dias": 2,
-      "percentual": 8.3,
+      "dias": 0,
+      "percentual": 0.0,
       "cor": "#DC143C"
     },
     {
       "status": "Parcial",
-      "dias": 8,
-      "percentual": 33.3,
+      "dias": 6,
+      "percentual": 35.3,
       "cor": "#FF8C00"
     }
   ],
@@ -95,12 +80,6 @@
       "horas_paralisacao": 6.5,
       "horas_parcial": 0,
       "horas_total": 6.5
-    },
-    {
-      "embarcacao": "P-54",
-      "horas_paralisacao": 10.5,
-      "horas_parcial": 0,
-      "horas_total": 10.5
     },
     {
       "embarcacao": "P-62",
