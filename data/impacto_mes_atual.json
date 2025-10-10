@@ -7,20 +7,20 @@
     "mes_nome_pt": "Outubro",
     "ano": 2025,
     "mes": 10,
-    "atualizado_em": "2025-10-10 09:29:53",
-    "total_embarcacoes": 2
+    "atualizado_em": "2025-10-10 09:33:12",
+    "total_embarcacoes": 3
   },
   "resumo_geral": {
-    "horas_paralisacao": 52.1,
+    "horas_paralisacao": 62.6,
     "horas_parcial": 0,
-    "horas_impacto_total": 52.1,
-    "dias_acoplado": 11,
-    "dias_desacoplado": 0,
-    "dias_parcial": 6,
-    "dias_efetivos_total": 17,
-    "percentual_acoplado": 64.7,
-    "percentual_desacoplado": 0.0,
-    "percentual_parcial": 35.3
+    "horas_impacto_total": 62.6,
+    "dias_acoplado": 16,
+    "dias_desacoplado": 2,
+    "dias_parcial": 8,
+    "dias_efetivos_total": 26,
+    "percentual_acoplado": 61.5,
+    "percentual_desacoplado": 7.7,
+    "percentual_parcial": 30.8
   },
   "embarcacoes": {
     "P-53": {
@@ -37,6 +37,21 @@
       "percentual_acoplado": 57.1,
       "percentual_desacoplado": 0.0,
       "percentual_parcial": 42.9
+    },
+    "P-54": {
+      "horas_paralisacao": 10.5,
+      "horas_parcial": 0,
+      "horas_impacto_total": 10.5,
+      "dias_acoplado": 5,
+      "dias_desacoplado": 2,
+      "dias_parcial": 2,
+      "dias_com_paralisacao": 2,
+      "dias_sem_paralisacao": 19,
+      "total_registros": 21,
+      "dias_efetivos_total": 9,
+      "percentual_acoplado": 55.6,
+      "percentual_desacoplado": 22.2,
+      "percentual_parcial": 22.2
     },
     "P-62": {
       "horas_paralisacao": 45.6,
@@ -57,20 +72,20 @@
   "grafico_pizza": [
     {
       "status": "Acoplado",
-      "dias": 11,
-      "percentual": 64.7,
+      "dias": 16,
+      "percentual": 61.5,
       "cor": "#2E8B57"
     },
     {
       "status": "Desacoplado",
-      "dias": 0,
-      "percentual": 0.0,
+      "dias": 2,
+      "percentual": 7.7,
       "cor": "#DC143C"
     },
     {
       "status": "Parcial",
-      "dias": 6,
-      "percentual": 35.3,
+      "dias": 8,
+      "percentual": 30.8,
       "cor": "#FF8C00"
     }
   ],
@@ -80,6 +95,12 @@
       "horas_paralisacao": 6.5,
       "horas_parcial": 0,
       "horas_total": 6.5
+    },
+    {
+      "embarcacao": "P-54",
+      "horas_paralisacao": 10.5,
+      "horas_parcial": 0,
+      "horas_total": 10.5
     },
     {
       "embarcacao": "P-62",
