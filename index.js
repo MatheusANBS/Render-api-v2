@@ -3,6 +3,17 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+// DB
+require('dotenv').config();
+const { Pool } = require('pg');
+
+let pool = null;
+if (process.env.DATABASE_URL) {
+    pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    console.log('🔌 Conectando ao banco via DATABASE_URL');
+} else {
+    console.log('⚠️ DATABASE_URL não definida — usando armazenamento em JSON local');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001; // Usar PORT do Render ou 3001 local
@@ -417,26 +428,69 @@ function writeAniversariantes(obj) {
     fs.writeFileSync(aniversariantesPath, JSON.stringify(obj, null, 2));
 }
 
-// GET - listar
-app.get('/aniversariantes', (req, res) => {
+// GET - listar (DB if available, else JSON file)
+app.get('/aniversariantes', async (req, res) => {
     try {
+        if (pool) {
+            const { rows } = await pool.query('SELECT id, nome, cargo, setor, dia, mes, ano, foto_filename, foto_mime FROM aniversariantes ORDER BY ano DESC, mes DESC, dia DESC, nome');
+            // Transform rows into the same nested structure expected by the frontend
+            const out = {};
+            rows.forEach(r => {
+                const ano = String(r.ano);
+                const mes = String(r.mes).padStart(2,'0');
+                const dia = String(r.dia).padStart(2,'0');
+                const meses = {
+                    '01':'janeiro','02':'fevereiro','03':'março','04':'abril','05':'maio','06':'junho',
+                    '07':'julho','08':'agosto','09':'setembro','10':'outubro','11':'novembro','12':'dezembro'
+                };
+                const nomeMes = meses[mes];
+                if (!out[ano]) out[ano] = {};
+                if (!out[ano][mes]) out[ano][mes] = {};
+                if (!out[ano][mes][nomeMes]) out[ano][mes][nomeMes] = {};
+                if (!out[ano][mes][nomeMes][dia]) out[ano][mes][nomeMes][dia] = [];
+                out[ano][mes][nomeMes][dia].push({ nome: r.nome, cargo: r.cargo, setor: r.setor, foto: r.foto_filename, id: r.id });
+            });
+            return res.json(out);
+        }
         const data = readAniversariantes();
         res.json(data);
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: 'erro ao ler aniversariantes' });
     }
 });
 
-// POST - adicionar (multipart: foto optional)
-app.post('/aniversariantes', upload.single('foto'), (req, res) => {
+// POST - adicionar (aceita multipart/form-data campo 'foto' OU JSON com fotoBase64 + fotoFilename)
+app.post('/aniversariantes', upload.single('foto'), async (req, res) => {
     try {
-        const { nome, cargo, setor, dia, mes, ano } = req.body;
+        const body = req.body || {};
+        const isJson = req.is('application/json');
+        const nome = body.nome;
+        const cargo = body.cargo || '';
+        const setor = body.setor || '';
+        const dia = body.dia;
+        const mes = body.mes;
+        const ano = body.ano;
+
         if (!nome || !dia || !mes || !ano) return res.status(400).json({ error: 'nome, dia, mes, ano obrigatórios' });
 
+        // If DB available, insert there
+        if (pool) {
+            const fotoBase64 = isJson ? body.fotoBase64 : null;
+            const fotoFilename = isJson ? body.fotoFilename : (req.file ? req.file.originalname : null);
+            const fotoMime = isJson ? body.fotoMime : (req.file ? req.file.mimetype : null);
+            const fotoBuffer = fotoBase64 ? Buffer.from(fotoBase64, 'base64') : (req.file ? fs.readFileSync(req.file.path) : null);
+
+            const insertSql = `INSERT INTO aniversariantes (nome, cargo, setor, dia, mes, ano, foto_filename, foto_mime, foto) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, nome, cargo, setor, dia, mes, ano, foto_filename`;
+            const params = [nome, cargo, setor, parseInt(dia), parseInt(mes), parseInt(ano), fotoFilename || null, fotoMime || null, fotoBuffer];
+            const { rows } = await pool.query(insertSql, params);
+            return res.json({ success: true, aniversariante: rows[0] });
+        }
+
+        // Fallback to JSON file storage
         const data = readAniversariantes();
         if (!data[ano]) data[ano] = {};
         if (!data[ano][mes]) data[ano][mes] = {};
-
         const meses = {
             '01':'janeiro','02':'fevereiro','03':'março','04':'abril','05':'maio','06':'junho',
             '07':'julho','08':'agosto','09':'setembro','10':'outubro','11':'novembro','12':'dezembro'
@@ -445,9 +499,11 @@ app.post('/aniversariantes', upload.single('foto'), (req, res) => {
         if (!data[ano][mes][nomeMes]) data[ano][mes][nomeMes] = {};
         if (!data[ano][mes][nomeMes][dia]) data[ano][mes][nomeMes][dia] = [];
 
-        const fotoNome = req.file ? req.file.filename : `${nome.toLowerCase().replace(/\s+/g,'_')}.jpg`;
+        let novo = { nome, cargo, setor };
+        if (req.file) novo.foto = req.file.filename;
+        else if (isJson && body.fotoBase64) { novo.fotoBase64 = body.fotoBase64; novo.foto = body.fotoFilename || `${nome.toLowerCase().replace(/\s+/g,'_')}.jpg`; }
+        else novo.foto = `${nome.toLowerCase().replace(/\s+/g,'_')}.jpg`;
 
-        const novo = { nome, cargo: cargo||'', setor: setor||'', foto: fotoNome };
         data[ano][mes][nomeMes][dia].push(novo);
         writeAniversariantes(data);
         res.json({ success: true, aniversariante: novo });
@@ -458,9 +514,16 @@ app.post('/aniversariantes', upload.single('foto'), (req, res) => {
 });
 
 // DELETE - remover por nome/dia/mes/ano
-app.delete('/aniversariantes/:ano/:mes/:dia/:nome', (req, res) => {
+app.delete('/aniversariantes/:ano/:mes/:dia/:nome', async (req, res) => {
     try {
         const { ano, mes, dia, nome } = req.params;
+        if (pool) {
+            // Delete by matching fields
+            const delSql = 'DELETE FROM aniversariantes WHERE nome = $1 AND ano = $2 AND mes = $3 AND dia = $4 RETURNING id';
+            const { rows } = await pool.query(delSql, [decodeURIComponent(nome), parseInt(ano), parseInt(mes), parseInt(dia)]);
+            if (rows.length === 0) return res.status(404).json({ error: 'não encontrado' });
+            return res.json({ success: true });
+        }
         const data = readAniversariantes();
         const meses = {
             '01':'janeiro','02':'fevereiro','03':'março','04':'abril','05':'maio','06':'junho',
@@ -477,6 +540,26 @@ app.delete('/aniversariantes/:ano/:mes/:dia/:nome', (req, res) => {
         writeAniversariantes(data);
         res.json({ success: true });
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: 'erro ao remover' });
+    }
+});
+
+// GET - servir foto do aniversariante (bytea) pelo id
+app.get('/aniversariantes/:id/foto', async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!pool) return res.status(400).json({ error: 'Banco não configurado para servir fotos por id' });
+        const { rows } = await pool.query('SELECT foto, foto_mime, foto_filename FROM aniversariantes WHERE id = $1', [parseInt(id)]);
+        if (!rows[0]) return res.status(404).json({ error: 'Não encontrado' });
+        const r = rows[0];
+        if (!r.foto) return res.status(404).json({ error: 'Foto não disponível' });
+        const mime = r.foto_mime || 'image/jpeg';
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Content-Disposition', `inline; filename="${r.foto_filename || 'foto'}"`);
+        return res.send(r.foto);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'erro ao obter foto' });
     }
 });
