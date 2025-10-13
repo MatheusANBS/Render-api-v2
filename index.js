@@ -1,3 +1,6 @@
+
+
+// ...existing code...
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
@@ -5,14 +8,17 @@ const path = require('path');
 const multer = require('multer');
 // DB
 require('dotenv').config();
+
 const { Pool } = require('pg');
+
+
 
 let pool = null;
 if (process.env.DATABASE_URL) {
-    pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
-    console.log('🔌 Conectando ao banco via DATABASE_URL');
+        pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+        console.log('🔌 Conectando ao banco via DATABASE_URL');
 } else {
-    console.log('⚠️ DATABASE_URL não definida — usando armazenamento em JSON local');
+        console.log('⚠️ DATABASE_URL não definida — usando armazenamento em JSON local');
 }
 
 const app = express();
@@ -428,41 +434,41 @@ function writeAniversariantes(obj) {
     fs.writeFileSync(aniversariantesPath, JSON.stringify(obj, null, 2));
 }
 
-// GET - listar (DB if available, else JSON file)
+
+// GET - listar (sempre banco, erro se não houver pool)
 app.get('/aniversariantes', async (req, res) => {
     try {
-        if (pool) {
-            const { rows } = await pool.query('SELECT id, nome, cargo, setor, dia, mes, ano, foto_filename, foto_mime FROM aniversariantes ORDER BY ano DESC, mes DESC, dia DESC, nome');
-            // Transform rows into the same nested structure expected by the frontend
-            const out = {};
-            rows.forEach(r => {
-                const ano = String(r.ano);
-                const mes = String(r.mes).padStart(2,'0');
-                const dia = String(r.dia).padStart(2,'0');
-                const meses = {
-                    '01':'janeiro','02':'fevereiro','03':'março','04':'abril','05':'maio','06':'junho',
-                    '07':'julho','08':'agosto','09':'setembro','10':'outubro','11':'novembro','12':'dezembro'
-                };
-                const nomeMes = meses[mes];
-                if (!out[ano]) out[ano] = {};
-                if (!out[ano][mes]) out[ano][mes] = {};
-                if (!out[ano][mes][nomeMes]) out[ano][mes][nomeMes] = {};
-                if (!out[ano][mes][nomeMes][dia]) out[ano][mes][nomeMes][dia] = [];
-                out[ano][mes][nomeMes][dia].push({ nome: r.nome, cargo: r.cargo, setor: r.setor, foto: r.foto_filename, id: r.id });
-            });
-            return res.json(out);
-        }
-        const data = readAniversariantes();
-        res.json(data);
+        if (!pool) return res.status(500).json({ error: 'Banco de dados não configurado' });
+        const { rows } = await pool.query('SELECT id, nome, cargo, setor, dia, mes, ano, foto_filename, foto_mime FROM aniversariantes ORDER BY ano DESC, mes DESC, dia DESC, nome');
+        // Transform rows into a nested structure expected by the frontend
+        const out = {};
+        rows.forEach(r => {
+            const ano = String(r.ano);
+            const mes = String(r.mes).padStart(2,'0');
+            const dia = String(r.dia).padStart(2,'0');
+            const meses = {
+                '01':'janeiro','02':'fevereiro','03':'março','04':'abril','05':'maio','06':'junho',
+                '07':'julho','08':'agosto','09':'setembro','10':'outubro','11':'novembro','12':'dezembro'
+            };
+            const nomeMes = meses[mes];
+            if (!out[ano]) out[ano] = {};
+            if (!out[ano][mes]) out[ano][mes] = {};
+            if (!out[ano][mes][nomeMes]) out[ano][mes][nomeMes] = {};
+            if (!out[ano][mes][nomeMes][dia]) out[ano][mes][nomeMes][dia] = [];
+            out[ano][mes][nomeMes][dia].push({ nome: r.nome, cargo: r.cargo, setor: r.setor, foto: r.foto_filename, id: r.id });
+        });
+        return res.json(out);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'erro ao ler aniversariantes' });
     }
 });
 
-// POST - adicionar (aceita multipart/form-data campo 'foto' OU JSON com fotoBase64 + fotoFilename)
+
+// POST - adicionar (sempre banco, erro se não houver pool)
 app.post('/aniversariantes', upload.single('foto'), async (req, res) => {
     try {
+        if (!pool) return res.status(500).json({ error: 'Banco de dados não configurado' });
         const body = req.body || {};
         const isJson = req.is('application/json');
         const nome = body.nome;
@@ -474,39 +480,15 @@ app.post('/aniversariantes', upload.single('foto'), async (req, res) => {
 
         if (!nome || !dia || !mes || !ano) return res.status(400).json({ error: 'nome, dia, mes, ano obrigatórios' });
 
-        // If DB available, insert there
-        if (pool) {
-            const fotoBase64 = isJson ? body.fotoBase64 : null;
-            const fotoFilename = isJson ? body.fotoFilename : (req.file ? req.file.originalname : null);
-            const fotoMime = isJson ? body.fotoMime : (req.file ? req.file.mimetype : null);
-            const fotoBuffer = fotoBase64 ? Buffer.from(fotoBase64, 'base64') : (req.file ? fs.readFileSync(req.file.path) : null);
+        const fotoBase64 = isJson ? body.fotoBase64 : null;
+        const fotoFilename = isJson ? body.fotoFilename : (req.file ? req.file.originalname : null);
+        const fotoMime = isJson ? body.fotoMime : (req.file ? req.file.mimetype : null);
+        const fotoBuffer = fotoBase64 ? Buffer.from(fotoBase64, 'base64') : (req.file ? fs.readFileSync(req.file.path) : null);
 
-            const insertSql = `INSERT INTO aniversariantes (nome, cargo, setor, dia, mes, ano, foto_filename, foto_mime, foto) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, nome, cargo, setor, dia, mes, ano, foto_filename`;
-            const params = [nome, cargo, setor, parseInt(dia), parseInt(mes), parseInt(ano), fotoFilename || null, fotoMime || null, fotoBuffer];
-            const { rows } = await pool.query(insertSql, params);
-            return res.json({ success: true, aniversariante: rows[0] });
-        }
-
-        // Fallback to JSON file storage
-        const data = readAniversariantes();
-        if (!data[ano]) data[ano] = {};
-        if (!data[ano][mes]) data[ano][mes] = {};
-        const meses = {
-            '01':'janeiro','02':'fevereiro','03':'março','04':'abril','05':'maio','06':'junho',
-            '07':'julho','08':'agosto','09':'setembro','10':'outubro','11':'novembro','12':'dezembro'
-        };
-        const nomeMes = meses[mes];
-        if (!data[ano][mes][nomeMes]) data[ano][mes][nomeMes] = {};
-        if (!data[ano][mes][nomeMes][dia]) data[ano][mes][nomeMes][dia] = [];
-
-        let novo = { nome, cargo, setor };
-        if (req.file) novo.foto = req.file.filename;
-        else if (isJson && body.fotoBase64) { novo.fotoBase64 = body.fotoBase64; novo.foto = body.fotoFilename || `${nome.toLowerCase().replace(/\s+/g,'_')}.jpg`; }
-        else novo.foto = `${nome.toLowerCase().replace(/\s+/g,'_')}.jpg`;
-
-        data[ano][mes][nomeMes][dia].push(novo);
-        writeAniversariantes(data);
-        res.json({ success: true, aniversariante: novo });
+        const insertSql = `INSERT INTO aniversariantes (nome, cargo, setor, dia, mes, ano, foto_filename, foto_mime, foto) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, nome, cargo, setor, dia, mes, ano, foto_filename`;
+        const params = [nome, cargo, setor, parseInt(dia), parseInt(mes), parseInt(ano), fotoFilename || null, fotoMime || null, fotoBuffer];
+        const { rows } = await pool.query(insertSql, params);
+        return res.json({ success: true, aniversariante: rows[0] });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'erro ao adicionar' });
