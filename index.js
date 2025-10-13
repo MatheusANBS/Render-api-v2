@@ -545,3 +545,38 @@ app.get('/aniversariantes/:id/foto', async (req, res) => {
         res.status(500).json({ error: 'erro ao obter foto' });
     }
 });
+
+// PUT - atualizar aniversariante por id (aceita multipart/form-data campo 'foto' OU JSON com fotoBase64)
+app.put('/aniversariantes/:id', upload.single('foto'), async (req, res) => {
+    try {
+        if (!pool) return res.status(500).json({ error: 'Banco de dados não configurado' });
+        const id = parseInt(req.params.id);
+        const body = req.body || {};
+        const isJson = req.is('application/json');
+
+        // Buscar existente
+        const { rows: existingRows } = await pool.query('SELECT id, nome, cargo, setor, dia, mes, ano, foto_filename, foto_mime, foto FROM aniversariantes WHERE id = $1', [id]);
+        if (!existingRows[0]) return res.status(404).json({ error: 'não encontrado' });
+        const existing = existingRows[0];
+
+        const nome = ('nome' in body && body.nome !== undefined && body.nome !== '') ? body.nome : existing.nome;
+        const cargo = ('cargo' in body) ? (body.cargo || '') : (existing.cargo || '');
+        const setor = ('setor' in body) ? (body.setor || '') : (existing.setor || '');
+        const dia = ('dia' in body && body.dia !== undefined && body.dia !== '') ? parseInt(body.dia) : existing.dia;
+        const mes = ('mes' in body && body.mes !== undefined && body.mes !== '') ? parseInt(body.mes) : existing.mes;
+        const ano = ('ano' in body && body.ano !== undefined && body.ano !== '') ? parseInt(body.ano) : existing.ano;
+
+        // Foto: priorizar multipart file > fotoBase64 > existing
+        const fotoBuffer = (req.file ? fs.readFileSync(req.file.path) : (isJson && body.fotoBase64 ? Buffer.from(body.fotoBase64, 'base64') : existing.foto));
+        const fotoFilename = req.file ? req.file.originalname : (isJson ? (body.fotoFilename || existing.foto_filename) : existing.foto_filename);
+        const fotoMime = req.file ? req.file.mimetype : (isJson ? (body.fotoMime || existing.foto_mime) : existing.foto_mime);
+
+        const updateSql = `UPDATE aniversariantes SET nome=$1, cargo=$2, setor=$3, dia=$4, mes=$5, ano=$6, foto_filename=$7, foto_mime=$8, foto=$9 WHERE id=$10 RETURNING id, nome, cargo, setor, dia, mes, ano, foto_filename`;
+        const params = [nome, cargo, setor, dia, mes, ano, fotoFilename || null, fotoMime || null, fotoBuffer, id];
+        const { rows } = await pool.query(updateSql, params);
+        return res.json({ success: true, aniversariante: rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'erro ao atualizar' });
+    }
+});
