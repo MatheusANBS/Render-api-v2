@@ -7,20 +7,20 @@
     "mes_nome_pt": "Outubro",
     "ano": 2025,
     "mes": 10,
-    "atualizado_em": "2025-10-10 09:33:12",
+    "atualizado_em": "2025-10-13 09:11:49",
     "total_embarcacoes": 3
   },
   "resumo_geral": {
     "horas_paralisacao": 62.6,
     "horas_parcial": 0,
     "horas_impacto_total": 62.6,
-    "dias_acoplado": 16,
+    "dias_acoplado": 18,
     "dias_desacoplado": 2,
     "dias_parcial": 8,
-    "dias_efetivos_total": 26,
-    "percentual_acoplado": 61.5,
-    "percentual_desacoplado": 7.7,
-    "percentual_parcial": 30.8
+    "dias_efetivos_total": 28,
+    "percentual_acoplado": 64.3,
+    "percentual_desacoplado": 7.1,
+    "percentual_parcial": 28.6
   },
   "embarcacoes": {
     "P-53": {
@@ -57,35 +57,35 @@
       "horas_paralisacao": 45.6,
       "horas_parcial": 0,
       "horas_impacto_total": 45.6,
-      "dias_acoplado": 7,
+      "dias_acoplado": 9,
       "dias_desacoplado": 0,
       "dias_parcial": 3,
       "dias_com_paralisacao": 3,
       "dias_sem_paralisacao": 18,
       "total_registros": 21,
-      "dias_efetivos_total": 10,
-      "percentual_acoplado": 70.0,
+      "dias_efetivos_total": 12,
+      "percentual_acoplado": 75.0,
       "percentual_desacoplado": 0.0,
-      "percentual_parcial": 30.0
+      "percentual_parcial": 25.0
     }
   },
   "grafico_pizza": [
     {
       "status": "Acoplado",
-      "dias": 16,
-      "percentual": 61.5,
+      "dias": 18,
+      "percentual": 64.3,
       "cor": "#2E8B57"
     },
     {
       "status": "Desacoplado",
       "dias": 2,
-      "percentual": 7.7,
+      "percentual": 7.1,
       "cor": "#DC143C"
     },
     {
       "status": "Parcial",
       "dias": 8,
-      "percentual": 30.8,
+      "percentual": 28.6,
       "cor": "#FF8C00"
     }
   ],
