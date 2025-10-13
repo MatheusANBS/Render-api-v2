@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3001; // Usar PORT do Render ou 3001 local
@@ -13,6 +14,9 @@ let dadosPessoas = null;
 // Middlewares
 app.use(cors());
 app.use(express.json());
+
+// Servir fotos estáticas (pasta public/fotos)
+app.use('/fotos-aniversariantes', express.static(path.join(__dirname, '..', 'public', 'fotos')));
 
 // Função para carregar dados de impacto
 function carregarDadosImpacto() {
@@ -79,14 +83,17 @@ app.get('/', (req, res) => {
             pessoas: dadosPessoas ? `${dadosPessoas.total} registros, ${dadosPessoas.datas.length} datas` : 'Não carregado'
         },
         endpoints: {
-            '/': 'Status da API',
-            '/dados-impacto': 'Dados de impacto completos',
-            '/dados-pessoas': 'Dados de pessoas completos',
-            '/resumo': 'Resumo dos dados carregados',
-            '/dados-por-data/:data': 'Dados de uma data específica',
-            '/pob-filtrado': 'POB hoje + média mensal (310106->P-62 P, 310107->P-53 C, 310104->P-54 A)',
-            '/standby-filtrado': 'Standby hoje + média mensal (310106->P-62, 310107->P-53, 310104->P-54) + filtro empresa UTC'
-        },
+                '/': 'Status da API',
+                '/dados-impacto': 'Dados de impacto completos',
+                '/dados-pessoas': 'Dados de pessoas completos',
+                '/resumo': 'Resumo dos dados carregados',
+                '/dados-por-data/:data': 'Dados de uma data específica',
+                '/pob-filtrado': 'POB hoje + média mensal (310106->P-62 P, 310107->P-53 C, 310104->P-54 A)',
+                '/standby-filtrado': 'Standby hoje + média mensal (310106->P-62, 310107->P-53, 310104->P-54) + filtro empresa UTC',
+                '/aniversariantes': 'GET lista, POST adiciona (multipart/form-data, campo "foto" opcional), DELETE /aniversariantes/:ano/:mes/:dia/:nome',
+                '/fotos-aniversariantes/:filename': 'Static - fotos dos aniversariantes (pasta public/fotos)',
+                '/niver.html': 'Página administrativa (frontend) para gerenciar aniversariantes (list/add/remove)'
+            },
         timestamp: new Date().toISOString()
     });
 });
@@ -379,3 +386,97 @@ async function inicializar() {
 }
 
 inicializar();
+
+// =================== Endpoints de Aniversariantes (CRUD mínimo) ===================
+
+// Config multer (salva em public/fotos)
+const fotosDir = path.join(__dirname, '..', 'public', 'fotos');
+if (!fs.existsSync(fotosDir)) fs.mkdirSync(fotosDir, { recursive: true });
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, fotosDir),
+    filename: (req, file, cb) => {
+        // nome vindo no campo 'nome' ou name do arquivo sem extensão
+        const nomeBase = (req.body.nome || path.parse(file.originalname).name)
+            .toLowerCase().replace(/\s+/g, '_');
+        const ext = path.extname(file.originalname) || '.jpg';
+        cb(null, `${nomeBase}${ext}`);
+    }
+});
+
+const upload = multer({ storage });
+
+const aniversariantesPath = path.join(__dirname, '..', 'public', 'aniversariantes.json');
+
+function readAniversariantes() {
+    if (!fs.existsSync(aniversariantesPath)) return {};
+    try { return JSON.parse(fs.readFileSync(aniversariantesPath, 'utf8')); } catch (e) { return {}; }
+}
+
+function writeAniversariantes(obj) {
+    fs.writeFileSync(aniversariantesPath, JSON.stringify(obj, null, 2));
+}
+
+// GET - listar
+app.get('/aniversariantes', (req, res) => {
+    try {
+        const data = readAniversariantes();
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: 'erro ao ler aniversariantes' });
+    }
+});
+
+// POST - adicionar (multipart: foto optional)
+app.post('/aniversariantes', upload.single('foto'), (req, res) => {
+    try {
+        const { nome, cargo, setor, dia, mes, ano } = req.body;
+        if (!nome || !dia || !mes || !ano) return res.status(400).json({ error: 'nome, dia, mes, ano obrigatórios' });
+
+        const data = readAniversariantes();
+        if (!data[ano]) data[ano] = {};
+        if (!data[ano][mes]) data[ano][mes] = {};
+
+        const meses = {
+            '01':'janeiro','02':'fevereiro','03':'março','04':'abril','05':'maio','06':'junho',
+            '07':'julho','08':'agosto','09':'setembro','10':'outubro','11':'novembro','12':'dezembro'
+        };
+        const nomeMes = meses[mes];
+        if (!data[ano][mes][nomeMes]) data[ano][mes][nomeMes] = {};
+        if (!data[ano][mes][nomeMes][dia]) data[ano][mes][nomeMes][dia] = [];
+
+        const fotoNome = req.file ? req.file.filename : `${nome.toLowerCase().replace(/\s+/g,'_')}.jpg`;
+
+        const novo = { nome, cargo: cargo||'', setor: setor||'', foto: fotoNome };
+        data[ano][mes][nomeMes][dia].push(novo);
+        writeAniversariantes(data);
+        res.json({ success: true, aniversariante: novo });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'erro ao adicionar' });
+    }
+});
+
+// DELETE - remover por nome/dia/mes/ano
+app.delete('/aniversariantes/:ano/:mes/:dia/:nome', (req, res) => {
+    try {
+        const { ano, mes, dia, nome } = req.params;
+        const data = readAniversariantes();
+        const meses = {
+            '01':'janeiro','02':'fevereiro','03':'março','04':'abril','05':'maio','06':'junho',
+            '07':'julho','08':'agosto','09':'setembro','10':'outubro','11':'novembro','12':'dezembro'
+        };
+        const nomeMes = meses[mes];
+        if (!data[ano] || !data[ano][mes] || !data[ano][mes][nomeMes] || !data[ano][mes][nomeMes][dia]) {
+            return res.status(404).json({ error: 'não encontrado' });
+        }
+        const lista = data[ano][mes][nomeMes][dia];
+        const nova = lista.filter(a => a.nome !== nome);
+        data[ano][mes][nomeMes][dia] = nova;
+        if (nova.length === 0) delete data[ano][mes][nomeMes][dia];
+        writeAniversariantes(data);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'erro ao remover' });
+    }
+});
