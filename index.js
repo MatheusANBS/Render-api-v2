@@ -214,38 +214,33 @@ app.get('/pob-filtrado', (req, res) => {
         return m === mesAtual;
     });
     
-    // Definir mapeamento centro de custo -> valor esperado
-    const filtros = {
-        310106: 'P-62 P',
-        310107: 'P-53 C', 
-        310104: 'P-54 A'
+    // Definir status de POB por plataforma (SEM filtro de centro de custo)
+    const statusPOB = {
+        'P-62 P': 'P-62',
+        'P-53 C': 'P-53', 
+        'P-54 A': 'P-54'
     };
     
     const resultadosHoje = {};
     const resultadosMes = {};
     const totalGeralHoje = { encontrados: 0 };
     
-    // Processar para cada centro de custo
-    Object.keys(filtros).forEach(centroCusto => {
-        const valorEsperado = filtros[centroCusto];
+    // Processar para cada status/plataforma
+    Object.keys(statusPOB).forEach(status => {
+        const plataforma = statusPOB[status];
         
-        // Filtrar pessoas do centro de custo específico
-        const pessoasCentro = dadosPessoas.raw.filter(pessoa => 
-            pessoa['CENTRO DE CUSTO'].toString() === centroCusto.toString()
+        // 1. DADOS DE HOJE (última data) - filtrar apenas por status, SEM centro de custo
+        const pessoasHoje = dadosPessoas.raw.filter(pessoa => 
+            pessoa[ultimaData] === status
         );
-        
-        // 1. DADOS DE HOJE (última data)
-        const pessoasHoje = pessoasCentro.filter(pessoa => 
-            pessoa[ultimaData] === valorEsperado
-        );
-        resultadosHoje[centroCusto] = pessoasHoje.length;
+        resultadosHoje[plataforma] = pessoasHoje.length;
         totalGeralHoje.encontrados += pessoasHoje.length;
         
         // 2. MÉDIA DO MÊS
         const valoresTotaisMes = [];
         datasDoMes.forEach(data => {
-            const pessoasNaData = pessoasCentro.filter(pessoa => 
-                pessoa[data] === valorEsperado
+            const pessoasNaData = dadosPessoas.raw.filter(pessoa => 
+                pessoa[data] === status
             );
             valoresTotaisMes.push(pessoasNaData.length);
         });
@@ -254,7 +249,7 @@ app.get('/pob-filtrado', (req, res) => {
             ? Math.round(valoresTotaisMes.reduce((a, b) => a + b, 0) / valoresTotaisMes.length)
             : 0;
             
-        resultadosMes[centroCusto] = {
+        resultadosMes[plataforma] = {
             media: mediaMes,
             diasCalculados: valoresTotaisMes.length,
             valores: valoresTotaisMes
@@ -263,9 +258,9 @@ app.get('/pob-filtrado', (req, res) => {
     
     // Calcular média total do mês
     const mediaTotalMes = Math.round(
-        (resultadosMes['310107']?.media || 0) +
-        (resultadosMes['310104']?.media || 0) +
-        (resultadosMes['310106']?.media || 0)
+        (resultadosMes['P-53']?.media || 0) +
+        (resultadosMes['P-54']?.media || 0) +
+        (resultadosMes['P-62']?.media || 0)
     );
     
     res.json({
@@ -273,15 +268,15 @@ app.get('/pob-filtrado', (req, res) => {
         mes: `${mesAtual}/2025`,
         diasDoMes: datasDoMes.length,
         hoje: {
-            'P-53 C': resultadosHoje['310107'] || 0,
-            'P-54 A': resultadosHoje['310104'] || 0, 
-            'P-62 P': resultadosHoje['310106'] || 0,
+            'P-53 C': resultadosHoje['P-53'] || 0,
+            'P-54 A': resultadosHoje['P-54'] || 0, 
+            'P-62 P': resultadosHoje['P-62'] || 0,
             total: totalGeralHoje.encontrados
         },
         media_mes: {
-            'P-53 C': resultadosMes['310107']?.media || 0,
-            'P-54 A': resultadosMes['310104']?.media || 0,
-            'P-62 P': resultadosMes['310106']?.media || 0,
+            'P-53 C': resultadosMes['P-53']?.media || 0,
+            'P-54 A': resultadosMes['P-54']?.media || 0,
+            'P-62 P': resultadosMes['P-62']?.media || 0,
             total: mediaTotalMes
         }
     });
