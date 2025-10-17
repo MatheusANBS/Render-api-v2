@@ -54,10 +54,33 @@ function carregarDadosImpacto() {
 // Função para carregar dados de pessoas
 function carregarDadosPessoas() {
     try {
-        const pessoasPath = path.join(__dirname, 'data', 'csvjson.json');
-        if (fs.existsSync(pessoasPath)) {
+        const dataDir = path.join(__dirname, 'data');
+        let pessoasPath = null;
+        
+        // Procurar por arquivo excel_batch primeiro
+        if (fs.existsSync(dataDir)) {
+            const files = fs.readdirSync(dataDir);
+            const excelBatchFile = files.find(f => f.startsWith('excel_batch') && f.endsWith('.json'));
+            
+            if (excelBatchFile) {
+                pessoasPath = path.join(dataDir, excelBatchFile);
+                console.log(`📦 Encontrado arquivo excel_batch: ${excelBatchFile}`);
+            } else {
+                // Fallback para csvjson.json
+                pessoasPath = path.join(dataDir, 'csvjson.json');
+            }
+        }
+        
+        if (pessoasPath && fs.existsSync(pessoasPath)) {
             const data = fs.readFileSync(pessoasPath, 'utf8');
-            const rawData = JSON.parse(data);
+            let rawData = JSON.parse(data);
+            
+            // Suportar novo formato com metadata (excel-json-batch)
+            if (rawData.type === 'excel-json-batch' && rawData.files && Array.isArray(rawData.files)) {
+                // Extrair dados do primeiro arquivo
+                rawData = rawData.files[0]?.data || [];
+                console.log('📦 Usando novo formato excel-json-batch');
+            }
             
             // Processar dados básicos
             dadosPessoas = {
@@ -83,7 +106,7 @@ function carregarDadosPessoas() {
             console.log(`📅 Datas disponíveis: ${dadosPessoas.datas.length} (${dadosPessoas.datas[0]} - ${dadosPessoas.datas[dadosPessoas.datas.length-1]})`);
             console.log(`🏢 Centros de custo: ${dadosPessoas.centrosCusto.join(', ')}`);
         } else {
-            console.log('⚠️ csvjson.json não encontrado');
+            console.log('⚠️ Nenhum arquivo de dados encontrado (procurou por excel_batch*.json e csvjson.json)');
         }
     } catch (error) {
         console.error('❌ Erro ao carregar pessoas:', error);
