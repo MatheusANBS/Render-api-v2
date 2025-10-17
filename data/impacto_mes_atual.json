@@ -9,18 +9,18 @@
     "mes": 10,
     "horas_totais_periodo": 744,
     "dias_periodo": 31,
-    "atualizado_em": "2025-10-16 07:45:28",
+    "atualizado_em": "2025-10-17 08:42:38",
     "total_embarcacoes": 3,
     "metodo_calculo": "baseado_em_horas_totais"
   },
   "resumo_geral": {
-    "horas_acoplado": 2161.23,
-    "horas_desacoplado": 70.77,
+    "horas_acoplado": 2155.07,
+    "horas_desacoplado": 76.93,
     "horas_totais": 2232,
-    "percentual_acoplado": 96.8,
-    "percentual_desacoplado": 3.2,
-    "horas_paralisacao": 70.77,
-    "horas_impacto_total": 70.77
+    "percentual_acoplado": 96.6,
+    "percentual_desacoplado": 3.4,
+    "horas_paralisacao": 76.93,
+    "horas_impacto_total": 76.93
   },
   "embarcacoes": {
     "P-53": {
@@ -34,13 +34,13 @@
       "total_registros": 36
     },
     "P-54": {
-      "horas_acoplado": 725.33,
-      "horas_desacoplado": 18.67,
+      "horas_acoplado": 719.17,
+      "horas_desacoplado": 24.83,
       "horas_totais_periodo": 744,
-      "percentual_acoplado": 97.5,
-      "percentual_desacoplado": 2.5,
-      "horas_paralisacao": 18.67,
-      "horas_impacto_total": 18.67,
+      "percentual_acoplado": 96.7,
+      "percentual_desacoplado": 3.3,
+      "horas_paralisacao": 24.83,
+      "horas_impacto_total": 24.83,
       "total_registros": 31
     },
     "P-62": {
@@ -57,14 +57,14 @@
   "grafico_pizza": [
     {
       "status": "Acoplado",
-      "horas": 2161.23,
-      "percentual": 96.8,
+      "horas": 2155.07,
+      "percentual": 96.6,
       "cor": "#2E8B57"
     },
     {
       "status": "Desacoplado",
-      "horas": 70.77,
-      "percentual": 3.2,
+      "horas": 76.93,
+      "percentual": 3.4,
       "cor": "#DC143C"
     }
   ],
@@ -77,8 +77,8 @@
     },
     {
       "embarcacao": "P-54",
-      "horas_acoplado": 725.33,
-      "horas_desacoplado": 18.67,
+      "horas_acoplado": 719.17,
+      "horas_desacoplado": 24.83,
       "horas_total_periodo": 744
     },
     {
